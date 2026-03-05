@@ -276,6 +276,9 @@
 // ── plugins ──────────────────────────────────────────────────────────────
 Chart.register(ChartDataLabels);
 Chart.defaults.plugins.datalabels.display = false; // vypnuto globálně, zapíná se jen v donut
+Chart.defaults.plugins.legend.labels.font = { size: 12 };
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 8;
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const PAL = ['#2e86c1','#1e8449','#e67e22','#c0392b','#8e44ad','#17a589','#d4ac0d','#2980b9','#ca6f1e','#16a085'];
