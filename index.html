@@ -52,6 +52,8 @@
   .card-header{padding:13px 16px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
   .card-header h3{font-size:15px;font-weight:700;color:var(--text)}.card-header .sub{font-size:11px;color:var(--muted);margin-left:auto}
   .card-body{padding:14px 16px}.card canvas{width:100%!important}
+  .donut-wrap{position:relative;width:100%;aspect-ratio:1.6}
+  .donut-wrap canvas{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important}
   .hbar-list{list-style:none}.hbar-item{margin-bottom:9px}
   .hbar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;color:var(--text)}
   .hbar-label .pct{color:var(--muted);font-weight:600}
@@ -384,15 +386,25 @@ function donut(id,labels,data,colors){
   const bg=colors||PAL;
   const total=data.reduce((a,b)=>a+b,0);
   const getP=v=>total?Math.round(v/total*100):0;
-  // HTML legenda musí existovat před mkChart, aby ji afterInit plugin našel
   const canvas=document.getElementById(id); if(!canvas) return;
+  // Obalit canvas do .donut-wrap pro správný aspect-ratio při resize
+  let wrap;
+  if(canvas.parentNode.classList.contains('donut-wrap')){
+    wrap=canvas.parentNode;
+  } else {
+    wrap=document.createElement('div');wrap.className='donut-wrap';
+    canvas.parentNode.insertBefore(wrap,canvas);wrap.appendChild(canvas);
+  }
+  const cardBody=wrap.parentNode;
+  // HTML legenda mimo wrap, uvnitř card-body
   let leg=document.getElementById('leg-'+id);
-  if(!leg){leg=document.createElement('div');leg.id='leg-'+id;canvas.parentNode.insertBefore(leg,canvas.nextSibling);}
+  if(!leg){leg=document.createElement('div');leg.id='leg-'+id;cardBody.insertBefore(leg,wrap.nextSibling);}
   leg.style.cssText='display:none;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:8px;font-size:12px;color:var(--text)';
   leg.innerHTML=labels.map((lbl,i)=>`<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="flex-shrink:0;width:12px;height:12px;border-radius:2px;background:${bg[i]}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(lbl)}">${esc(lbl)}&nbsp;&nbsp;${data[i]} (${getP(data[i])}%)</span></div>`).join('');
   mkChart(id,{type:'doughnut',
     data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:2,borderColor:'#fff'}]},
     options:{
+      maintainAspectRatio:false,
       cutout:'55%',
       clip:false,
       plugins:{
@@ -414,7 +426,8 @@ function donut(id,labels,data,colors){
           color:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'#fff':ctx.dataset.backgroundColor[ctx.dataIndex];},
           anchor:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'center':'end';},
           align:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'center':'end';},
-          offset:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?0:(ctx.chart.width<500?5:10);}
+          offset:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?0:(ctx.chart.width<500?5:10);},
+          clip:false
         }
       }
     }
