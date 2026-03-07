@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRO Čejč 2019 · Dashboard</title>
+<script src="data_2019.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --brand:#145222;--brand2:#1a8535;--accent:#e67e22;--green:#1e8449;
+    --red:#c0392b;--bg:#f4f6f9;--card:#ffffff;--border:#dce3ec;
+    --text:#1c2b3a;--muted:#6b7a8d;--radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+  .header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:22px 32px;display:flex;align-items:center;gap:18px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+  .header-info h1{font-size:26px;font-weight:800}.header-info p{opacity:.7;font-size:15px;margin-top:2px}
+  .header-badge{margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:6px 16px;font-size:13px;white-space:nowrap}
+  .nav{background:var(--brand);display:flex;flex-wrap:wrap;gap:2px;padding:0 32px}
+  .nav button{background:none;border:none;color:rgba(255,255,255,.6);padding:12px 16px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s}
+  .nav button:hover{color:#fff}.nav button.active{color:#fff;border-bottom-color:#f5c800}
+  .filters{background:var(--card);border-bottom:1px solid var(--border);padding:9px 32px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .filters label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  .filters select{border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:#fff;color:var(--text);cursor:pointer}
+  .filter-count{margin-left:auto;font-size:14px;color:var(--muted)}.filter-count strong{color:var(--brand);font-size:15px}
+  .btn-reset{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--muted)}.btn-reset:hover{background:var(--bg)}
+  .page{display:none;padding:22px 32px;max-width:1440px;margin:0 auto}.page.active{display:block}
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+  .stat-card{background:var(--card);border-radius:var(--radius);padding:18px;border:1px solid var(--border);position:relative;overflow:hidden}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--sc,var(--brand2));border-radius:4px 0 0 4px}
+  .stat-card.green::before{background:var(--green)}.stat-card.orange::before{background:var(--accent)}.stat-card.red::before{background:var(--red)}
+  .stat-card .val{font-size:30px;font-weight:800;color:var(--brand);line-height:1}
+  .stat-card.green .val{color:var(--green)}.stat-card.orange .val{color:var(--accent)}.stat-card.red .val{color:var(--red)}
+  .stat-card .lbl{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.4}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}
+  .grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:18px}
+  @media(max-width:768px){.grid-2,.grid-3,.grid-1-2{grid-template-columns:1fr}}
+  .volne-layout{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"q5h q6h" "q5t q5t" "q6t q6t";gap:18px;margin-bottom:18px}
+  .volne-q5h{grid-area:q5h}.volne-q6h{grid-area:q6h}.volne-q5t{grid-area:q5t}.volne-q6t{grid-area:q6t}
+  @media(max-width:768px){.volne-layout{grid-template-columns:1fr;grid-template-areas:"q5h" "q5t" "q6h" "q6t"}}
+  @media(max-width:500px){
+    #page-rozvoj .grid-2 .card:nth-child(1){order:2}
+    #page-rozvoj .grid-2 .card:nth-child(2){order:1}
+    .q7-nums{display:none!important}
+    .q7-grid{grid-template-columns:110px 1fr!important}
+    .q7-mob-nums{display:flex!important}
+  }
+  .card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+  .card-header{padding:13px 16px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .card-header h3{font-size:15px;font-weight:700;color:var(--text)}.card-header .sub{font-size:11px;color:var(--muted);margin-left:auto}
+  .card-body{padding:14px 16px}.card canvas{width:100%!important}
+  .donut-wrap{position:relative;width:100%;aspect-ratio:1.6}
+  .donut-wrap canvas{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important}
+  .hbar-list{list-style:none}.hbar-item{margin-bottom:9px}
+  .hbar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;color:var(--text)}
+  .hbar-label .pct{color:var(--muted);font-weight:600}
+  .hbar-track{background:var(--bg);border-radius:4px;height:9px;overflow:hidden}
+  .hbar-fill{height:100%;border-radius:4px;background:var(--brand2);transition:width .4s ease}
+  .hbar-fill.green{background:var(--green)}.hbar-fill.orange{background:var(--accent)}.hbar-fill.red{background:var(--red)}
+  .marks-grid{display:grid;gap:7px}
+  .mark-row{display:flex;align-items:center;gap:10px;font-size:13px}
+  .mark-row .lbl{flex:0 0 260px;color:var(--text);line-height:1.3}
+  .mark-bar-wrap{flex:1;min-width:0;background:var(--bg);border-radius:4px;height:8px;overflow:hidden}
+  .mark-bar{height:100%;border-radius:4px;transition:width .4s}
+  .mark-val{width:30px;text-align:right;font-weight:700;font-size:13px;flex-shrink:0}
+  .verbatim-table{width:100%;border-collapse:collapse;font-size:13px}
+  .verbatim-table th{background:var(--bg);padding:7px 9px;text-align:left;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border)}
+  .verbatim-table td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  .verbatim-table tr:last-child td{border-bottom:none}.verbatim-table tr:hover td{background:#f8fbff}
+  .tag{display:inline-block;background:#e8f4fd;color:var(--brand);border-radius:10px;padding:1px 7px;font-size:11px;margin:1px}
+  .section-title{font-size:17px;font-weight:800;color:var(--brand);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .section-title::after{content:'';flex:1;height:2px;background:linear-gradient(to right,var(--border),transparent)}
+  .alert{border-radius:var(--radius);padding:12px 16px;font-size:12.5px;margin-bottom:14px;display:flex;gap:8px}
+  .alert-info{background:#eaf4fd;border-left:4px solid var(--brand2);color:#1a4a6b}
+  #loading{position:fixed;inset:0;background:var(--brand);display:flex;align-items:center;justify-content:center;z-index:999;color:#fff;font-size:17px;font-weight:700;flex-direction:column;gap:12px}
+  .spinner{width:38px;height:38px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .table-scroll{overflow-x:auto;max-height:420px;overflow-y:auto}
+  @media(max-width:600px){
+    .header{padding:12px 16px;gap:10px}
+    .header img{height:48px}
+    .header-info h1{font-size:18px}
+    .header-badge{display:none}
+    .nav{padding:0 4px;justify-content:center}
+    .nav button{padding:10px 12px;font-size:13px}
+    .filters{padding:8px 12px}
+    .page{padding:12px 10px}
+    .stat-card .val{font-size:22px}
+    .mark-row{flex-wrap:wrap}
+    .mark-row .lbl{flex:0 0 100%;margin-bottom:2px}
+    .verbatim-table{font-size:11px}
+    .verbatim-table td,.verbatim-table th{padding:5px 6px}
+  }
+  @media(max-width:430px){
+    .nav{display:grid;grid-template-columns:repeat(4,1fr);padding:0;gap:0}
+    .nav button{padding:5px 3px;font-size:11px;white-space:normal;line-height:1.25;text-align:center}
+  }
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><span>Načítám data…</span></div>
+
+<div class="header">
+  <a href="#" onclick="showPage('page-overview');return false;" style="display:flex;align-items:center;gap:18px;text-decoration:none;color:inherit;cursor:pointer">
+    <img src="znak_cejc.png" alt="Znak obce Čejč" style="height:70px;width:auto">
+    <div class="header-info">
+      <h1>Program rozvoje obce Čejč 2019–2025</h1>
+      <p>Výsledky dotazníkového šetření · analytický dashboard</p>
+    </div>
+  </a>
+  <div class="header-badge" id="totalBadge">— respondentů</div>
+</div>
+
+<nav class="nav" id="mainNav">
+  <button class="active" data-page="page-overview">Přehled</button>
+  <button data-page="page-spokojenost">Spokojenost</button>
+  <button data-page="page-sluzby">Hodnocení služeb</button>
+  <button data-page="page-rozvoj">Rozvoj obce</button>
+  <button data-page="page-odpady">Životní prostředí</button>
+  <button data-page="page-komunikace">Informační kanály</button>
+  <button data-page="page-volne">Volné odpovědi</button>
+  <button data-page="page-demo">Demografie</button>
+</nav>
+
+<div class="filters">
+  <label>Filtr:</label>
+  <select id="fSex"><option value="">Pohlaví: vše</option><option value="0">Muži</option><option value="1">Ženy</option></select>
+  <select id="fAge"><option value="">Věk: vše</option><option value="1">15–29</option><option value="2">30–49</option><option value="3">50–64</option><option value="4">65+</option></select>
+  <select id="fRes"><option value="">Pobyt: vše</option><option value="1">Od narození</option><option value="2">Od dětství</option><option value="3">5+ let</option><option value="4">Do 5 let</option></select>
+  <select id="fHH"><option value="">Domácnost: vše</option><option value="1">S dětmi</option><option value="2">Bez dětí</option><option value="3">Jiné</option></select>
+  <button class="btn-reset" id="btnReset">✕ Reset</button>
+  <div class="filter-count">Zobrazeno: <strong id="filteredCount">—</strong></div>
+</div>
+
+<!-- PAGES -->
+<div class="page active" id="page-overview">
+  <div class="stat-row" id="stat-overview"></div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Jak se Vám v Čejči žije?</h3></div><div class="card-body"><canvas id="ch-q1" height="210"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Mezilidské vztahy v obci</h3></div><div class="card-body"><canvas id="ch-q2" height="210"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Co by se mělo zlepšit?</h3><span class="sub">max 5 voleb</span></div><div class="card-body"><ul class="hbar-list" id="hbar-q3"></ul></div></div>
+    <div class="card"><div class="card-header"><h3>Na co byste přednostně využili finanční prostředky obce?</h3><span class="sub">max 5 voleb</span></div><div class="card-body"><ul class="hbar-list" id="hbar-q9"></ul></div></div>
+  </div>
+</div>
+
+<div class="page" id="page-spokojenost">
+  <div class="section-title">Spokojenost se životem v obci</div>
+  <div class="stat-row" id="stat-spok"></div>
+  <div class="grid-1-2">
+    <div class="card"><div class="card-header"><h3>Spokojenost dle pohlaví</h3></div><div class="card-body" style="height:300px"><canvas id="ch-q1sex" height="300"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Spokojenost dle věkové skupiny (% rozložení)</h3></div><div class="card-body" style="height:300px"><canvas id="ch-q1age" height="300"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Mezilidské vztahy dle věku</h3></div><div class="card-body" style="height:300px"><canvas id="ch-q2age" height="300"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Spokojenost dle délky pobytu</h3></div><div class="card-body" style="height:300px"><canvas id="ch-q1res" height="300"></canvas></div></div>
+  </div>
+</div>
+
+<div class="page" id="page-sluzby">
+  <div class="section-title">Hodnocení prostředí a služeb</div>
+  <div class="alert alert-info">ℹ️ Škálování jako ve škole: 1 = nejlepší, 5 = nejhorší. Výjimka: hluk (1=ticho, 5=hluk).</div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header"><h3>Průměrné hodnocení všech oblastí</h3></div>
+    <div class="card-body"><div class="marks-grid" id="marks-q4"></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Rozložení – 5 nejhůře hodnocených</h3></div><div class="card-body" style="height:400px"><canvas id="ch-q4worst" height="400"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Rozložení – 5 nejlépe hodnocených</h3></div><div class="card-body" style="height:400px"><canvas id="ch-q4best" height="400"></canvas></div></div>
+  </div>
+</div>
+
+<div class="page" id="page-rozvoj">
+  <div class="section-title">Rozvoj obce</div>
+  <div class="grid-3">
+    <div class="card"><div class="card-header"><h3>Jak by se měla obec dále rozvíjet?</h3></div><div class="card-body"><canvas id="ch-q8" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Měla by obec investovat do výstavby bytů pro mladé?</h3></div><div class="card-body"><canvas id="ch-q10" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Měla by obec investovat do výstavby bydlení pro seniory?</h3></div><div class="card-body"><canvas id="ch-q11" height="200"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Měla by se obec zaměřit na rozvoj cestovního ruchu?</h3></div><div class="card-body"><canvas id="ch-q12" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Na co byste přednostně využili finanční prostředky obce?</h3></div><div class="card-body"><ul class="hbar-list" id="hbar-q9b"></ul></div></div>
+  </div>
+  <div class="card" style="margin-bottom:18px"><div class="card-header"><h3>Jak rozvíjet cestovní ruch? – komentáře</h3></div><div class="card-body" id="vrb-q12a"></div></div>
+  <div class="card">
+    <div class="card-header"><h3>Má obec usilovat o navrácení názvu Městys Čejč?</h3></div>
+    <div class="card-body"><canvas id="ch-q18" height="200"></canvas></div>
+  </div>
+</div>
+
+<div class="page" id="page-odpady">
+  <div class="section-title">Životní prostředí</div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Jak intenzivně pociťujete zápach z Horákovy farmy?</h3></div><div class="card-body"><canvas id="ch-q15" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Zápach z Horákovy farmy dle ulice</h3></div><div class="card-body"><ul class="hbar-list" id="hbar-q15u"></ul></div></div>
+  </div>
+  <div class="filters" style="border-radius:var(--radius);border:1px solid var(--border);margin-bottom:14px">
+    <label>Původce zápachu:</label>
+    <div style="position:relative;display:inline-block" id="q16z-wrap">
+      <button id="q16z-btn" style="border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:13px;background:#fff;cursor:pointer;color:var(--text)">Všichni původci ▾</button>
+      <div id="q16z-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:260px;max-height:320px;overflow-y:auto;padding:6px 0">
+        <div id="q16z-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h3>Jak intenzivně pociťujete zápach z jiných zdrojů?</h3></div>
+      <div class="card-body"><canvas id="ch-q16" height="200"></canvas></div>
+      <div class="card-header" style="border-top:1px solid var(--border)"><h3>Původci zápachu</h3></div>
+      <div class="card-body"><ul class="hbar-list" id="hbar-q16z"></ul></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Ulice – jiné zdroje zápachu</h3></div>
+      <div class="card-body"><ul class="hbar-list" id="hbar-q16u"></ul></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Třídíte odpad?</h3></div><div class="card-body"><canvas id="ch-q13" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Vyhovuje Vám systém třídění odpadů?</h3></div><div class="card-body"><canvas id="ch-q14" height="200"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-bottom:18px"><div class="card-header"><h3>Připomínky k systému třídění odpadů</h3></div><div class="card-body" id="vrb-q14a"></div></div>
+  <div class="card">
+    <div class="card-header"><h3>Přivítali byste pytlový sběr papíru a plastů se slevou z poplatku?</h3></div>
+    <div class="card-body"><canvas id="ch-q15p" height="200"></canvas></div>
+  </div>
+</div>
+
+<div class="page" id="page-komunikace">
+  <div class="section-title">Informační kanály</div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header">
+      <h3>Jakým způsobem získáváte informace o dění v obci?</h3>
+      <span class="sub" style="display:flex;gap:14px;align-items:center">
+        <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;border-radius:2px;background:#1e8449"></span>Pravidelně</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;border-radius:2px;background:#91cf60"></span>Občas</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;border-radius:2px;background:#e0e0e0;border:1px solid #ccc"></span>Nevyužívám</span>
+      </span>
+    </div>
+    <div class="card-body" id="q7-table" style="padding:0"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Jakým způsobem získáváte informace o dění v obci? – úplný přehled</h3></div>
+    <div class="card-body" style="height:350px"><canvas id="ch-q7" height="350"></canvas></div>
+  </div>
+</div>
+
+<div class="page" id="page-volne">
+  <div class="section-title">Volné odpovědi</div>
+  <div class="volne-layout">
+    <div class="card volne-q5h"><div class="card-header"><h3>Kategorie – co chybí</h3></div><div class="card-body"><ul class="hbar-list" id="hbar-q5c"></ul></div></div>
+    <div class="card volne-q6h"><div class="card-header"><h3>Kategorie – zdravotní/sociální služby</h3></div><div class="card-body"><ul class="hbar-list" id="hbar-q6c"></ul></div></div>
+    <div class="card volne-q5t">
+    <div class="card-header"><h3>Co nejvíce chybí</h3>
+      <span class="sub"><div style="position:relative;display:inline-block" id="q5cat-wrap">
+        <button id="q5cat-btn" style="border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-size:12px;background:#fff;cursor:pointer;color:var(--text)">Všechny kategorie ▾</button>
+        <div id="q5cat-panel" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:240px;max-height:300px;overflow-y:auto;padding:6px 0"><div id="q5cat-list"></div></div>
+      </div></span>
+    </div>
+    <div class="card-body table-scroll"><table class="verbatim-table" id="tbl-q5"><thead><tr><th>Odpověď</th><th>Kategorie</th></tr></thead><tbody></tbody></table></div>
+  </div>
+    <div class="card volne-q6t">
+    <div class="card-header"><h3>Zdravotní / sociální služby</h3>
+      <span class="sub"><div style="position:relative;display:inline-block" id="q6cat-wrap">
+        <button id="q6cat-btn" style="border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-size:12px;background:#fff;cursor:pointer;color:var(--text)">Všechny kategorie ▾</button>
+        <div id="q6cat-panel" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:240px;max-height:300px;overflow-y:auto;padding:6px 0"><div id="q6cat-list"></div></div>
+      </div></span>
+    </div>
+    <div class="card-body table-scroll"><table class="verbatim-table" id="tbl-q6"><thead><tr><th>Odpověď</th><th>Kategorie</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  </div><!-- /volne-layout -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header"><h3>Komentáře k cestovnímu ruchu (q12a)</h3>
+      <span class="sub"><div style="position:relative;display:inline-block" id="q12acat-wrap">
+        <button id="q12acat-btn" style="border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-size:12px;background:#fff;cursor:pointer;color:var(--text)">Všechny kategorie ▾</button>
+        <div id="q12acat-panel" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:240px;max-height:300px;overflow-y:auto;padding:6px 0"><div id="q12acat-list"></div></div>
+      </div></span>
+    </div>
+    <div class="card-body table-scroll"><table class="verbatim-table" id="tbl-q12a"><thead><tr><th>Odpověď</th><th>Kategorie</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Další náměty a komentáře</h3>
+      <span class="sub"><div style="position:relative;display:inline-block" id="q21cat-wrap">
+        <button id="q21cat-btn" style="border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-size:12px;background:#fff;cursor:pointer;color:var(--text)">Všechny kategorie ▾</button>
+        <div id="q21cat-panel" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:240px;max-height:300px;overflow-y:auto;padding:6px 0"><div id="q21cat-list"></div></div>
+      </div></span>
+    </div>
+    <div class="card-body table-scroll"><table class="verbatim-table" id="tbl-q21"><thead><tr><th>Odpověď</th><th>Kategorie</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<div class="page" id="page-demo">
+  <div class="section-title">Demografický profil respondentů</div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Pohlaví</h3></div><div class="card-body"><canvas id="ch-sex" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Věková skupina</h3></div><div class="card-body"><canvas id="ch-age" height="200"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-header"><h3>Délka pobytu v obci</h3></div><div class="card-body"><canvas id="ch-res" height="200"></canvas></div></div>
+    <div class="card"><div class="card-header"><h3>Typ domácnosti</h3></div><div class="card-body"><canvas id="ch-hh" height="200"></canvas></div></div>
+  </div>
+</div>
+
+<script>
+// Data 2019
+const D = window.D2019;
+const META = window.META2019;
+
+// ── plugins ──────────────────────────────────────────────────────────────
+Chart.register(ChartDataLabels);
+Chart.defaults.plugins.datalabels.display = false;
+Chart.defaults.plugins.legend.labels.font = { size: 12 };
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 8;
+
+Chart.register({
+  id:'responsiveLegendPos',
+  _apply(chart,redraw){
+    if(chart.config.type!=='doughnut') return;
+    const leg=document.getElementById('leg-'+chart.canvas.id);
+    const narrow=chart.width<500;
+    chart.options.plugins.legend.display=!narrow;
+    if(leg) leg.style.display=narrow?'grid':'none';
+    if(redraw) chart.update('none');
+  },
+  afterInit(chart){this._apply(chart,false);},
+  resize(chart){this._apply(chart,true);}
+});
+
+// ── helpers ──────────────────────────────────────────────────────────────
+const PAL = ['#2e86c1','#1e8449','#e67e22','#c0392b','#8e44ad','#17a589','#d4ac0d','#2980b9','#ca6f1e','#16a085'];
+const L5  = ['#1a9850','#91cf60','#fee08b','#fc8d59','#d73027'];
+
+const charts = {};
+function mkChart(id, cfg) {
+  const el = document.getElementById(id); if (!el) return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el.getContext('2d'), cfg);
+}
+function avg(a) { const v=a.filter(x=>x!=null&&!isNaN(x)); return v.length?v.reduce((s,x)=>s+x,0)/v.length:null; }
+function pct(n,t) { return t?Math.round(n/t*100):0; }
+function scaleColor(v){if(v==null)return null;if(v<=2)return'#1e8449';if(v<=3)return'#91cf60';if(v<=3.5)return'#fee08b';if(v<=4)return'#fc8d59';return'#d73027';}
+function countQ(data,key,vals) {
+  const c={}; vals.forEach(v=>c[v]=0);
+  data.forEach(r=>{ if(r[key]!=null && c[r[key]]!==undefined) c[r[key]]++; });
+  return vals.map(v=>c[v]);
+}
+function countBits(data,key,n) {
+  const c=new Array(n).fill(0);
+  data.forEach(r=>{ if(r[key]) for(let i=0;i<n;i++) if(r[key]&(1<<i)) c[i]++; });
+  return c;
+}
+function q4avgs(data) {
+  const s=new Array(META.q4labels.length).fill(0), n=new Array(META.q4labels.length).fill(0);
+  data.forEach(r=>{ if(!r.q4) return; for(let i=0;i<META.q4labels.length;i++) if(r.q4[i]!=='.'){s[i]+=+r.q4[i];n[i]++;} });
+  return META.q4labels.map((lbl,i)=>({label:lbl,avg:n[i]?s[i]/n[i]:null,n:n[i]}));
+}
+function q4dist(data,idx) {
+  const c=[0,0,0,0,0];
+  data.forEach(r=>{ if(r.q4&&r.q4[idx]!=='.') c[+r.q4[idx]-1]++; });
+  return c;
+}
+function markCol(v) {
+  if(v===null) return '#ccc';
+  if(v<=1.8) return '#1a9850'; if(v<=2.5) return '#91cf60';
+  if(v<=3.2) return '#fee08b'; if(v<=4.0) return '#fc8d59';
+  return '#d73027';
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function hbar(elId, items, maxN, cls, maxBar) {
+  const el=document.getElementById(elId); if(!el) return;
+  el.innerHTML='';
+  const barMax=maxBar||maxN;
+  items.forEach(it=>{
+    const p=maxN?Math.round(it.val/maxN*100):0;
+    const w=barMax?Math.min(Math.round(it.val/barMax*100),100):0;
+    el.insertAdjacentHTML('beforeend',`
+      <li class="hbar-item">
+        <div class="hbar-label"><span>${esc(it.label)}</span><span class="pct">${it.val} (${p}%)</span></div>
+        <div class="hbar-track"><div class="hbar-fill ${cls||''}" style="width:${w}%"></div></div>
+      </li>`);
+  });
+}
+function vtable(tbId, rows) {
+  const tb=document.querySelector(`#${tbId} tbody`); if(!tb) return;
+  tb.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(r.text)}</td><td>${(r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function vlist(elId, texts, lim=100) {
+  const el=document.getElementById(elId); if(!el) return;
+  el.innerHTML='';
+  texts.slice(0,lim).forEach(t=>{
+    el.insertAdjacentHTML('beforeend',`<p style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)">${esc(t)}</p>`);
+  });
+  if(texts.length>lim) el.insertAdjacentHTML('beforeend',`<p style="font-size:11px;color:var(--muted);padding-top:4px">…a dalších ${texts.length-lim} odpovědí</p>`);
+}
+function donut(id,labels,data,colors){
+  const bg=colors||PAL;
+  const total=data.reduce((a,b)=>a+b,0);
+  const getP=v=>total?Math.round(v/total*100):0;
+  const canvas=document.getElementById(id); if(!canvas) return;
+  let wrap;
+  if(canvas.parentNode.classList.contains('donut-wrap')){
+    wrap=canvas.parentNode;
+  } else {
+    wrap=document.createElement('div');wrap.className='donut-wrap';
+    canvas.parentNode.insertBefore(wrap,canvas);wrap.appendChild(canvas);
+  }
+  const cardBody=wrap.parentNode;
+  let leg=document.getElementById('leg-'+id);
+  if(!leg){leg=document.createElement('div');leg.id='leg-'+id;cardBody.insertBefore(leg,wrap.nextSibling);}
+  leg.style.cssText='display:none;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:8px;font-size:12px;color:var(--text)';
+  leg.innerHTML=labels.map((lbl,i)=>`<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="flex-shrink:0;width:12px;height:12px;border-radius:2px;background:${bg[i]}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(lbl)}">${esc(lbl)}&nbsp;&nbsp;${data[i]} (${getP(data[i])}%)</span></div>`).join('');
+  mkChart(id,{type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:2,borderColor:'#fff'}]},
+    options:{
+      maintainAspectRatio:false,
+      cutout:'55%',
+      clip:false,
+      plugins:{
+        legend:{position:'right',labels:{
+          font:{size:12},boxWidth:12,padding:8,
+          generateLabels(chart){
+            const ds=chart.data.datasets[0];
+            return chart.data.labels.map((lbl,i)=>({
+              text:`${lbl}  ${ds.data[i]} (${getP(ds.data[i])}%)`,
+              fillStyle:ds.backgroundColor[i],strokeStyle:'#fff',lineWidth:1,index:i
+            }));
+          }
+        }},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw} (${getP(ctx.raw)}%)`}},
+        datalabels:{
+          display:ctx=>getP(ctx.dataset.data[ctx.dataIndex])>0,
+          formatter:v=>getP(v)+'%',
+          font:{size:13,weight:'bold'},
+          color:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'#fff':ctx.dataset.backgroundColor[ctx.dataIndex];},
+          anchor:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'center':'end';},
+          align:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?'center':'end';},
+          offset:ctx=>{const p=getP(ctx.dataset.data[ctx.dataIndex]);return p>=6?0:(ctx.chart.width<500?5:10);},
+          clip:false
+        }
+      }
+    }
+  });
+}
+function stackedPct(id,groupLabels,series) {
+  mkChart(id,{type:'bar',data:{labels:groupLabels,datasets:series},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10.5},boxWidth:11}}},
+      scales:{x:{stacked:true,grid:{color:'#f0f0f0'},ticks:{font:{size:11}}},
+              y:{stacked:true,max:100,grid:{color:'#f0f0f0'},ticks:{font:{size:11},callback:v=>v+'%'}}}}});
+}
+
+// ── filters ───────────────────────────────────────────────────────────────
+let F={sex:'',age:'',res:'',hh:''};
+function filtered() {
+  return D.filter(r=>{
+    if(F.sex!==''&&r.sex!==+F.sex) return false;
+    if(F.age!==''&&r.age!==+F.age) return false;
+    if(F.res!==''&&r.res!==+F.res) return false;
+    if(F.hh!==''&&r.hh!==+F.hh)   return false;
+    return true;
+  });
+}
+
+// ── renderers ─────────────────────────────────────────────────────────────
+function renderOverview(d) {
+  const t=d.length, happy=d.filter(r=>r.q1<=2).length, bad=d.filter(r=>r.q1>=4).length;
+  const q1a=avg(d.map(r=>r.q1)), q2a=avg(d.map(r=>r.q2));
+  document.getElementById('stat-overview').innerHTML=`
+    <div class="stat-card"><div class="val">${t}</div><div class="lbl">Respondentů celkem</div></div>
+    <div class="stat-card green"><div class="val">${pct(happy,t)}%</div><div class="lbl">Spokojeni se životem (q1 ≤ 2)</div></div>
+    <div class="stat-card red"><div class="val">${pct(bad,t)}%</div><div class="lbl">Nespokojeni (q1 ≥ 4)</div></div>
+    <div class="stat-card"><div class="val" style="${q1a?`color:${scaleColor(q1a)}`:''}">  ${q1a?q1a.toFixed(2):'–'}</div><div class="lbl">Průměr spokojenosti (q1)</div></div>
+    <div class="stat-card"><div class="val" style="${q2a?`color:${scaleColor(q2a)}`:''}">  ${q2a?q2a.toFixed(2):'–'}</div><div class="lbl">Průměr vztahů (q2)</div></div>`;
+  donut('ch-q1',['1–velmi dobře','2–spíše dobře','3–ani/ani','4–spíše špatně','5–velmi špatně'],countQ(d,'q1',[1,2,3,4,5]),L5);
+  donut('ch-q2',['1–velmi dobré','2–docela dobré','3–ne moc dobré','4–špatné','5–nedovedu'],countQ(d,'q2',[1,2,3,4,5]),['#1a9850','#91cf60','#fc8d59','#d73027','#bdbdbd']);
+  const q3c=countBits(d,'q3',META.q3opts.length);
+  hbar('hbar-q3',META.q3opts.map((l,i)=>({label:l,val:q3c[i]})).sort((a,b)=>b.val-a.val),t);
+  const q9c=countBits(d,'q9',META.q9opts.length);
+  const q9s=META.q9opts.map((l,i)=>({label:l,val:q9c[i]})).sort((a,b)=>b.val-a.val).slice(0,13);
+  hbar('hbar-q9',q9s,t);
+  hbar('hbar-q9b',q9s,t);
+}
+
+function renderSpokojenost(d) {
+  const t=d.length, happy=d.filter(r=>r.q1<=2).length, bad=d.filter(r=>r.q1>=4).length;
+  const q1a=avg(d.map(r=>r.q1)), q2a=avg(d.map(r=>r.q2));
+  document.getElementById('stat-spok').innerHTML=`
+    <div class="stat-card green"><div class="val">${pct(happy,t)}%</div><div class="lbl">Spokojeni (q1=1–2)</div></div>
+    <div class="stat-card red"><div class="val">${pct(bad,t)}%</div><div class="lbl">Nespokojeni (q1=4–5)</div></div>
+    <div class="stat-card" style="${q1a?`--sc:${scaleColor(q1a)}`:''}"><div class="val" style="${q1a?`color:${scaleColor(q1a)}`:''}">  ${q1a?q1a.toFixed(2):'–'}</div><div class="lbl">Průměr q1</div></div>
+    <div class="stat-card" style="${q2a?`--sc:${scaleColor(q2a)}`:''}"><div class="val" style="${q2a?`color:${scaleColor(q2a)}`:''}">  ${q2a?q2a.toFixed(2):'–'}</div><div class="lbl">Průměr q2</div></div>`;
+
+  const m=d.filter(r=>r.sex===0), f=d.filter(r=>r.sex===1);
+  mkChart('ch-q1sex',{type:'bar',data:{labels:['1','2','3','4','5'],datasets:[
+    {label:'Muži',data:countQ(m,'q1',[1,2,3,4,5]),backgroundColor:'#2e86c1'},
+    {label:'Ženy',data:countQ(f,'q1',[1,2,3,4,5]),backgroundColor:'#e91e8c'}
+  ]},options:{maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{color:'#f0f0f0'}},y:{beginAtZero:true,grid:{color:'#f0f0f0'}}}}});
+
+  const ages=[1,2,3,4], ageL=['15–29','30–49','50–64','65+'];
+  const byAge=ages.map(a=>countQ(d.filter(r=>r.age===a),'q1',[1,2,3,4,5]));
+  const pA=byAge.map(arr=>{const s=arr.reduce((x,v)=>x+v,0);return arr.map(v=>s?Math.round(v/s*100):0);});
+  stackedPct('ch-q1age',ageL,[1,2,3,4,5].map((v,vi)=>({label:`Zn.${v}`,backgroundColor:L5[vi],data:ages.map((_,ai)=>pA[ai][vi])})));
+
+  const byAge2=ages.map(a=>countQ(d.filter(r=>r.age===a),'q2',[1,2,3,4,5]));
+  const pA2=byAge2.map(arr=>{const s=arr.reduce((x,v)=>x+v,0);return arr.map(v=>s?Math.round(v/s*100):0);});
+  stackedPct('ch-q2age',ageL,[1,2,3,4,5].map((v,vi)=>({label:['Velmi dobré','Docela dobré','Ne moc dobré','Špatné','Nedovedu'][vi],backgroundColor:['#1a9850','#91cf60','#fc8d59','#d73027','#bdbdbd'][vi],data:ages.map((_,ai)=>pA2[ai][vi])})));
+
+  const ress=[1,2,3,4], resL=['Od narozen','Od dětství','5+ let','Do 5 let'];
+  const byRes=ress.map(r2=>countQ(d.filter(r=>r.res===r2),'q1',[1,2,3,4,5]));
+  const pR=byRes.map(arr=>{const s=arr.reduce((x,v)=>x+v,0);return arr.map(v=>s?Math.round(v/s*100):0);});
+  stackedPct('ch-q1res',resL,[1,2,3,4,5].map((v,vi)=>({label:`Zn.${v}`,backgroundColor:L5[vi],data:ress.map((_,ri)=>pR[ri][vi])})));
+}
+
+function renderSluzby(d) {
+  const avgs2=q4avgs(d);
+  const sorted=[...avgs2].filter(a=>a.avg!==null).sort((a,b)=>a.avg-b.avg);
+  const mg=document.getElementById('marks-q4'); mg.innerHTML='';
+  sorted.forEach(it=>{
+    const c=markCol(it.avg);
+    mg.insertAdjacentHTML('beforeend',`<div class="mark-row">
+      <div class="lbl">${esc(it.label)}</div>
+      <div class="mark-bar-wrap"><div class="mark-bar" style="width:${Math.round(it.avg/5*100)}%;background:${c}"></div></div>
+      <div class="mark-val" style="color:${c}">${it.avg.toFixed(2)}</div>
+    </div>`);
+  });
+  const worst5=sorted.slice(-5).reverse(), best5=sorted.slice(0,5);
+  const distChart=(id,items)=>{
+    const datasets=[1,2,3,4,5].map((grade,k)=>({
+      label:String(grade),
+      data:items.map(it=>{const idx=avgs2.findIndex(a=>a.label===it.label);return q4dist(d,idx)[k];}),
+      backgroundColor:L5[k]
+    }));
+    mkChart(id,{type:'bar',
+      data:{labels:items.map(it=>it.label),datasets},
+      options:{
+        maintainAspectRatio:false,
+        indexAxis:'y',
+        plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},
+        scales:{x:{stacked:true,grid:{color:'#f0f0f0'}},y:{stacked:true,grid:{color:'#f0f0f0'},ticks:{font:{size:11},crossAlign:'far',callback:function(val){const lbl=this.getLabelForValue(val);if(lbl.length<=18)return lbl;const mid=lbl.lastIndexOf(' ',18);return mid>0?[lbl.slice(0,mid),lbl.slice(mid+1)]:[lbl.slice(0,18),lbl.slice(18)];}}}},
+        layout:{padding:{right:52}}
+      },
+      plugins:[{id:'avgLabel',afterDraw(chart){
+        const ctx=chart.ctx,xs=chart.scales.x,ys=chart.scales.y;
+        ctx.save();
+        ctx.font='bold 12px "Segoe UI",system-ui,sans-serif';
+        ctx.fillStyle='#1c2b3a';ctx.textAlign='left';ctx.textBaseline='middle';
+        items.forEach((it,i)=>{
+          const idx=avgs2.findIndex(a=>a.label===it.label);
+          const tot=q4dist(d,idx).reduce((s,v)=>s+v,0);
+          ctx.fillText('Ø '+it.avg.toFixed(2),xs.getPixelForValue(tot)+5,ys.getPixelForValue(i));
+        });
+        ctx.restore();
+      }}]
+    });
+  };
+  distChart('ch-q4worst',worst5);
+  distChart('ch-q4best',best5);
+}
+
+function renderRozvoj(d) {
+  donut('ch-q8',['Zůstat stejná','Rozrůstat se','Nedovedu'],countQ(d,'q8',[1,2,3]),['#2e86c1','#1e8449','#bdbdbd']);
+  donut('ch-q10',['Určitě ano','Spíše ano','Spíše ne','Určitě ne','Nedokážu'],countQ(d,'q10',[1,2,3,4,5]),L5);
+  donut('ch-q11',['Určitě ano','Spíše ano','Spíše ne','Určitě ne','Nedokážu'],countQ(d,'q11',[1,2,3,4,5]),L5);
+  donut('ch-q12',['Ano','Ne','Nedokážu'],countQ(d,'q12',[1,2,3]),['#1e8449','#c0392b','#bdbdbd']);
+  vlist('vrb-q12a',d.filter(r=>r.q12===1&&r.q12a).map(r=>r.q12a));
+  // Q18 – Městys Čejč (specifické pro rok 2019)
+  donut('ch-q18',['Určitě ano','Spíše ano','Spíše ne','Určitě ne','Nedokážu'],countQ(d,'q18_mestysc',[1,2,3,4,5]),L5);
+}
+
+let _odpDat=null;
+let _q5Sel=new Set(),_q6Sel=new Set(),_q21Sel=new Set(),_q12aSel=new Set(),_volneDat=null,_volneListenerAdded=false;
+
+function qcatBtn(btnId,sel){
+  const btn=document.getElementById(btnId); if(!btn) return;
+  btn.textContent=sel.size===0?'Všechny kategorie ▾':sel.size+' kategori'+(sel.size===1?'e':'í')+' ▾';
+}
+function buildCatDropdown(btnId,panelId,listId,wrapId,labels,sel,onChange,counts){
+  const btn=document.getElementById(btnId),panel=document.getElementById(panelId),list=document.getElementById(listId);
+  if(!btn||!panel||!list) return;
+  list.innerHTML=
+    `<div style="padding:6px 12px 8px;border-bottom:1px solid var(--border);display:flex;gap:10px">
+      <a id="${btnId}-sa" href="#" style="font-size:12px;color:var(--brand);text-decoration:none;cursor:pointer">Vybrat vše</a>
+      <span style="color:var(--muted)">·</span>
+      <a id="${btnId}-ca" href="#" style="font-size:12px;color:var(--muted);text-decoration:none;cursor:pointer">Zrušit vše</a>
+    </div>`+
+    labels.map((lbl,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${i}"${sel.has(i)?' checked':''} style="cursor:pointer;accent-color:var(--brand)">
+      <span style="flex:1">${esc(lbl)}</span>
+      ${counts?`<span style="color:var(--muted);font-size:12px;flex-shrink:0">${counts[i]}</span>`:''}
+    </label>`).join('');
+  list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.onchange=()=>{if(cb.checked) sel.add(+cb.value); else sel.delete(+cb.value); qcatBtn(btnId,sel); onChange();};
+  });
+  document.getElementById(`${btnId}-sa`)?.addEventListener('click',e=>{
+    e.preventDefault(); labels.forEach((_,i)=>sel.add(i));
+    list.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
+    qcatBtn(btnId,sel); onChange();
+  });
+  document.getElementById(`${btnId}-ca`)?.addEventListener('click',e=>{
+    e.preventDefault(); sel.clear();
+    list.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+    qcatBtn(btnId,sel); onChange();
+  });
+  btn.onclick=e=>{e.stopPropagation(); panel.style.display=panel.style.display==='none'?'block':'none';};
+}
+let _q16zSel=new Set();
+let _q16zListenerAdded=false;
+
+function q16zUpdateBtn(){
+  const btn=document.getElementById('q16z-btn'); if(!btn) return;
+  if(_q16zSel.size===0) btn.textContent='Všichni původci ▾';
+  else if(_q16zSel.size===1) btn.textContent=[..._q16zSel][0]+' ▾';
+  else btn.textContent=_q16zSel.size+' původci ▾';
+}
+
+function renderQ16sub(d){
+  const fd=_q16zSel.size>0?d.filter(r=>_q16zSel.has(r.q16z)):d;
+  donut('ch-q16',['Velmi silně','Silně','Slabě','Vůbec','Nedovedu'],countQ(fd,'q16',[1,2,3,4,5]),['#d73027','#fc8d59','#fee08b','#91cf60','#bdbdbd']);
+  const uu={};
+  fd.forEach(r=>{if(r.q16u) uu[r.q16u]=(uu[r.q16u]||0)+1;});
+  const uui=Object.entries(uu).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([l,v])=>({label:l,val:v}));
+  hbar('hbar-q16u',uui,fd.filter(r=>r.q16u).length,'orange',25);
+}
+
+function renderOdpady(d) {
+  _odpDat=d;
+  donut('ch-q13',['Důsledně','Přiměřeně','Občas','Vůbec'],countQ(d,'q13',[1,2,3,4]),['#1a9850','#91cf60','#fc8d59','#d73027']);
+  // Q14 v roce 2019: pouze 3 hodnoty (1=vyhovuje, 2=celkem vyhovuje, 3=nevyhovuje)
+  donut('ch-q14',['Vyhovuje','Celkem vyhovuje','Nevyhovuje'],countQ(d,'q14',[1,2,3]),['#1a9850','#91cf60','#d73027']);
+  donut('ch-q15',['Velmi silně','Silně','Slabě','Vůbec','Nedovedu'],countQ(d,'q15',[1,2,3,4,5]),['#d73027','#fc8d59','#fee08b','#91cf60','#bdbdbd']);
+  // q16z – přehled původců
+  const zc={};
+  d.forEach(r=>{if(r.q16z) zc[r.q16z]=(zc[r.q16z]||0)+1;});
+  const zi=Object.entries(zc).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([l,v])=>({label:l,val:v}));
+  hbar('hbar-q16z',zi,d.filter(r=>r.q16z).length,'red',25);
+  // multi-select dropdown původci
+  const btn=document.getElementById('q16z-btn');
+  const panel=document.getElementById('q16z-panel');
+  const list=document.getElementById('q16z-list');
+  if(btn&&panel&&list){
+    const opts=Array.from(new Set(d.filter(r=>r.q16z).map(r=>r.q16z))).sort();
+    [..._q16zSel].forEach(v=>{if(!opts.includes(v)) _q16zSel.delete(v);});
+    list.innerHTML=
+      `<div style="padding:6px 12px 8px;border-bottom:1px solid var(--border);display:flex;gap:10px">
+        <a id="q16z-selall" href="#" style="font-size:12px;color:var(--brand);text-decoration:none;cursor:pointer">Vybrat vše</a>
+        <span style="color:var(--muted)">·</span>
+        <a id="q16z-clrall" href="#" style="font-size:12px;color:var(--muted);text-decoration:none;cursor:pointer">Zrušit vše</a>
+      </div>`+
+      opts.map(o=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${esc(o)}"${_q16zSel.has(o)?' checked':''} style="cursor:pointer;accent-color:var(--brand)">
+        <span style="flex:1">${esc(o)}</span>
+        <span style="color:var(--muted);font-size:12px">${zc[o]||0}</span>
+      </label>`).join('');
+    list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.onchange=()=>{
+        if(cb.checked) _q16zSel.add(cb.value); else _q16zSel.delete(cb.value);
+        q16zUpdateBtn(); renderQ16sub(_odpDat);
+      };
+    });
+    document.getElementById('q16z-selall')?.addEventListener('click',e=>{
+      e.preventDefault(); opts.forEach(o=>_q16zSel.add(o));
+      list.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
+      q16zUpdateBtn(); renderQ16sub(_odpDat);
+    });
+    document.getElementById('q16z-clrall')?.addEventListener('click',e=>{
+      e.preventDefault(); _q16zSel.clear();
+      list.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+      q16zUpdateBtn(); renderQ16sub(_odpDat);
+    });
+    btn.onclick=e=>{e.stopPropagation(); panel.style.display=panel.style.display==='none'?'block':'none';};
+    if(!_q16zListenerAdded){
+      _q16zListenerAdded=true;
+      document.addEventListener('click',e=>{
+        const wrap=document.getElementById('q16z-wrap');
+        if(wrap&&!wrap.contains(e.target)){const p=document.getElementById('q16z-panel');if(p) p.style.display='none';}
+      });
+    }
+    q16zUpdateBtn();
+  }
+  // q15u – ulice farma
+  const uc={};
+  d.forEach(r=>{if(r.q15u) uc[r.q15u]=(uc[r.q15u]||0)+1;});
+  const ui=Object.entries(uc).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([l,v])=>({label:l,val:v}));
+  hbar('hbar-q15u',ui,d.filter(r=>r.q15u).length,'orange',25);
+  vlist('vrb-q14a',d.filter(r=>r.q14a).map(r=>r.q14a));
+  renderQ16sub(d);
+  // Q15_pytlovy – pytlový sběr (specifické pro rok 2019)
+  donut('ch-q15p',['Určitě ano','Spíše ano','Spíše ne','Určitě ne','Nedokážu'],countQ(d,'q15_pytlovy',[1,2,3,4,5]),L5);
+}
+
+function renderKomunikace(d) {
+  const k=META.q7kanaly, n=k.length;
+  const P=new Array(n).fill(0),O=new Array(n).fill(0),N=new Array(n).fill(0);
+  d.forEach(r=>{if(!r.q7) return; for(let i=0;i<n;i++){const c=r.q7[i];if(c==='P')P[i]++;else if(c==='O')O[i]++;else if(c==='N')N[i]++;}});
+  const t=d.length;
+  const rows=k.map((lbl,i)=>({lbl,P:P[i],O:O[i],N:N[i]})).sort((a,b)=>b.P-a.P);
+  const q7el=document.getElementById('q7-table');
+  if(q7el){
+    const hdr='padding:7px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);background:var(--bg)';
+    const bdr='border-bottom:1px solid var(--border)';
+    q7el.innerHTML=`<div class="q7-grid" style="display:grid;grid-template-columns:130px 1fr 300px">
+      <div style="${hdr}">Kanál</div>
+      <div style="${hdr}">Využití</div>
+      <div class="q7-nums" style="${hdr};display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center">
+        <span style="color:#1e8449">Pravidelně</span><span style="color:#6aaa2f">Občas</span><span style="color:#999">Nevyužívám</span>
+      </div>
+      ${rows.map(r=>{
+        const pP=pct(r.P,t),pO=pct(r.O,t),pN=pct(r.N,t);
+        return `<div style="${bdr};padding:10px 12px;font-weight:600;font-size:14px">${esc(r.lbl)}</div>
+        <div style="${bdr};padding:10px 12px">
+          <div style="display:flex;border-radius:4px;overflow:hidden;height:22px">
+            <div style="width:${pP}%;background:#1e8449" title="Pravidelně: ${r.P}"></div>
+            <div style="width:${pO}%;background:#91cf60" title="Občas: ${r.O}"></div>
+            <div style="width:${pN}%;background:#e0e0e0" title="Nevyužívám: ${r.N}"></div>
+          </div>
+          <div class="q7-mob-nums" style="display:none;gap:10px;margin-top:5px;font-size:12px;flex-wrap:wrap">
+            <span><strong style="color:#1e8449">${r.P}</strong><span style="color:var(--muted)"> (${pP}%)</span></span>
+            <span style="color:var(--muted);font-size:10px">·</span>
+            <span><strong style="color:#6aaa2f">${r.O}</strong><span style="color:var(--muted)"> (${pO}%)</span></span>
+            <span style="color:var(--muted);font-size:10px">·</span>
+            <span><strong style="color:#999">${r.N}</strong><span style="color:var(--muted)"> (${pN}%)</span></span>
+          </div>
+        </div>
+        <div class="q7-nums" style="${bdr};padding:10px 12px;display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;font-size:13px">
+          <div><strong style="color:#1e8449">${r.P}</strong><span style="color:var(--muted);font-size:11px"> (${pP}%)</span></div>
+          <div><strong style="color:#6aaa2f">${r.O}</strong><span style="color:var(--muted);font-size:11px"> (${pO}%)</span></div>
+          <div><strong style="color:#999">${r.N}</strong><span style="color:var(--muted);font-size:11px"> (${pN}%)</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  const q7canvas=document.getElementById('ch-q7');
+  const mob=q7canvas&&q7canvas.offsetWidth<500;
+  const q7body=q7canvas&&q7canvas.parentNode;
+  if(q7body){q7body.style.height=(mob?'460px':'350px');q7canvas.height=mob?460:350;}
+  mkChart('ch-q7',{type:'bar',data:{labels:rows.map(r=>r.lbl),datasets:[
+    {label:'Pravidelně',data:rows.map(r=>r.P),backgroundColor:'#1e8449'},
+    {label:'Občas',data:rows.map(r=>r.O),backgroundColor:'#91cf60'},
+    {label:'Nevyužívám',data:rows.map(r=>r.N),backgroundColor:'#e0e0e0'}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    ...(mob?{indexAxis:'y'}:{}),
+    scales: mob?{
+      x:{stacked:false,beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{font:{size:11}}},
+      y:{stacked:false,grid:{color:'#f0f0f0'},ticks:{font:{size:14,weight:'600'},crossAlign:'far'}}
+    }:{
+      x:{stacked:false,grid:{color:'#f0f0f0'},ticks:{font:{size:14,weight:'600'}}},
+      y:{stacked:false,beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{font:{size:11}}}
+    },
+    layout:mob?{padding:{right:36}}:{},
+    plugins:{
+      legend:{position:'top',labels:{font:{size:mob?11:13},boxWidth:mob?11:12,padding:mob?10:8}},
+      datalabels:{
+        display:true,
+        anchor:'end',align:'end',
+        font:ctx=>({size:ctx.chart.width<500?12:13,weight:'bold'}),
+        color:ctx=>(['#1e8449','#6aaa2f','#999'][ctx.datasetIndex]||'#444'),
+        formatter:v=>v>0?v:null
+      }
+    }
+  }});
+}
+
+function renderVolne(d) {
+  _volneDat=d;
+  const q5c=countBits(d,'q5c',META.q5labels.length);
+  hbar('hbar-q5c',META.q5labels.map((l,i)=>({label:l,val:q5c[i]})).sort((a,b)=>b.val-a.val),d.length);
+  const q6c=countBits(d,'q6c',META.q6labels.length);
+  hbar('hbar-q6c',META.q6labels.map((l,i)=>({label:l,val:q6c[i]})).sort((a,b)=>b.val-a.val),d.length);
+  const q23c=countBits(d,'q23c',META.q21labels.length);
+  const q12ac=countBits(d,'q12ac',META.q12acats.length);
+  buildCatDropdown('q5cat-btn','q5cat-panel','q5cat-list','q5cat-wrap',META.q5labels,_q5Sel,()=>renderQ5table(_volneDat),q5c);
+  buildCatDropdown('q6cat-btn','q6cat-panel','q6cat-list','q6cat-wrap',META.q6labels,_q6Sel,()=>renderQ6table(_volneDat),q6c);
+  buildCatDropdown('q12acat-btn','q12acat-panel','q12acat-list','q12acat-wrap',META.q12alabels,_q12aSel,()=>renderQ12atable(_volneDat),q12ac);
+  buildCatDropdown('q21cat-btn','q21cat-panel','q21cat-list','q21cat-wrap',META.q21labels,_q21Sel,()=>renderQ21table(_volneDat),q23c);
+  qcatBtn('q5cat-btn',_q5Sel); qcatBtn('q6cat-btn',_q6Sel); qcatBtn('q12acat-btn',_q12aSel); qcatBtn('q21cat-btn',_q21Sel);
+  if(!_volneListenerAdded){
+    _volneListenerAdded=true;
+    document.addEventListener('click',e=>{
+      ['q5cat','q6cat','q12acat','q21cat'].forEach(id=>{
+        const wrap=document.getElementById(id+'-wrap');
+        if(wrap&&!wrap.contains(e.target)){const p=document.getElementById(id+'-panel');if(p) p.style.display='none';}
+      });
+    });
+  }
+  renderQ5table(d);
+  renderQ6table(d);
+  renderQ12atable(d);
+  renderQ21table(d);
+}
+
+function renderQ5table(d) {
+  vtable('tbl-q5',d.filter(r=>r.q5&&(_q5Sel.size===0||META.q5labels.some((_,i)=>_q5Sel.has(i)&&(r.q5c&(1<<i))))).map(r=>({text:r.q5,tags:META.q5labels.filter((_,i)=>r.q5c&(1<<i))})));
+}
+function renderQ6table(d) {
+  vtable('tbl-q6',d.filter(r=>r.q6&&(_q6Sel.size===0||META.q6labels.some((_,i)=>_q6Sel.has(i)&&(r.q6c&(1<<i))))).map(r=>({text:r.q6,tags:META.q6labels.filter((_,i)=>r.q6c&(1<<i))})));
+}
+function renderQ12atable(d) {
+  vtable('tbl-q12a',d.filter(r=>r.q12a&&(_q12aSel.size===0||META.q12alabels.some((_,i)=>_q12aSel.has(i)&&(r.q12ac&(1<<i))))).map(r=>({text:r.q12a,tags:META.q12alabels.filter((_,i)=>r.q12ac&(1<<i))})));
+}
+function renderQ21table(d) {
+  // v datech 2019 je pole q23 (ne q21) a bitmaska q23c (ne q21c)
+  vtable('tbl-q21',d.filter(r=>r.q23&&(_q21Sel.size===0||META.q21labels.some((_,i)=>_q21Sel.has(i)&&(r.q23c&(1<<i))))).map(r=>({text:r.q23,tags:META.q21labels.filter((_,i)=>r.q23c&(1<<i))})));
+}
+
+function renderDemo(d) {
+  donut('ch-sex',['Muž','Žena'],[d.filter(r=>r.sex===0).length,d.filter(r=>r.sex===1).length],['#2e86c1','#e91e8c']);
+  donut('ch-age',['15–29','30–49','50–64','65+'],([1,2,3,4]).map(v=>d.filter(r=>r.age===v).length),PAL.slice(0,4));
+  donut('ch-res',['Od narozen','Od dětství','5+ let','Do 5 let'],([1,2,3,4]).map(v=>d.filter(r=>r.res===v).length),PAL.slice(0,4));
+  donut('ch-hh',['S dětmi','Bez dětí','Jiné'],([1,2,3]).map(v=>d.filter(r=>r.hh===v).length),['#2e86c1','#1e8449','#e67e22']);
+}
+
+// ── page manager ──────────────────────────────────────────────────────────
+const renderers={'page-overview':renderOverview,'page-spokojenost':renderSpokojenost,'page-sluzby':renderSluzby,'page-rozvoj':renderRozvoj,'page-odpady':renderOdpady,'page-komunikace':renderKomunikace,'page-volne':renderVolne,'page-demo':renderDemo};
+let curPage='page-overview';
+
+function renderPage() {
+  const d=filtered();
+  document.getElementById('filteredCount').textContent=d.length;
+  renderers[curPage]?.(d);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`.nav button[data-page="${id}"]`).classList.add('active');
+  curPage=id; renderPage();
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────
+function boot() {
+  function tryGo() {
+    if(window.D2019&&window.META2019) { go(); return; }
+    let t=0;
+    const iv=setInterval(()=>{
+      if(window.D2019&&window.META2019){clearInterval(iv);go();return;}
+      if(++t>200){clearInterval(iv);document.getElementById('loading').innerHTML='<div style="color:#e74c3c;padding:20px;text-align:center"><b>&#9888;&#65039; Soubor data_2019.js nebyl nalezen.</b><br>Ujistěte se, že oba soubory jsou ve stejné složce.</div>';}
+    },50);
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',tryGo);
+  } else {
+    tryGo();
+  }
+}
+
+function go() {
+  document.getElementById('loading').style.display='none';
+  document.getElementById('totalBadge').textContent=`${D.length} respondentů`;
+  document.getElementById('filteredCount').textContent=D.length;
+  document.getElementById('mainNav').addEventListener('click',e=>{if(e.target.dataset.page) showPage(e.target.dataset.page);});
+  [['fSex','sex'],['fAge','age'],['fRes','res'],['fHH','hh']].forEach(([id,k])=>{
+    document.getElementById(id).addEventListener('change',e=>{F[k]=e.target.value;renderPage();});
+  });
+  document.getElementById('btnReset').addEventListener('click',()=>{
+    F={sex:'',age:'',res:'',hh:''};
+    ['fSex','fAge','fRes','fHH'].forEach(id=>document.getElementById(id).value='');
+    renderPage();
+  });
+  renderPage();
+}
+
+boot();
+</script>
+</body>
+</html>
